@@ -1,0 +1,4 @@
+cron:
+- description: Parking sync
+  url: /admin/cron/parking/sync
+  schedule: every 10 minutes

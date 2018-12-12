@@ -19,6 +19,7 @@
 from framework.plugin_loader import Plugin
 from framework.utils.plugins import Handler
 from plugins.parking.cron import ParkingSyncHandler
+from plugins.parking.handlers import ParkingLoadHandler
 
 
 class ParkingPlugin(Plugin):
@@ -26,6 +27,7 @@ class ParkingPlugin(Plugin):
         super(ParkingPlugin, self).__init__(configuration)
 
     def get_handlers(self, auth):
+        yield Handler(url='/app/load', handler=ParkingLoadHandler)
         if auth == Handler.AUTH_ADMIN:
             yield Handler(url='/admin/cron/parking/sync', handler=ParkingSyncHandler)
 

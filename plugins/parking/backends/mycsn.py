@@ -14,13 +14,19 @@
 # limitations under the License.
 #
 # @@license_version:1.5@@
+
 import base64
+import hashlib
 import json
 import logging
 
 from google.appengine.api import urlfetch
+from google.appengine.ext import ndb
 
+from framework.utils import put_in_chunks
 from mcfw.rpc import returns, arguments
+from plugins.parking.models import Parking, ParkingInfo, ParkingLocation, \
+    ParkingStatistics
 
 
 @returns(dict)
@@ -45,7 +51,44 @@ def get_data(params):
     return json.loads(result.content)
 
 
-def sync(params):
+def create_parking_uid(city, name):
+    key = u'mycsn_%s_%s' % (city, name)
+    return hashlib.sha256(key).hexdigest().upper()
+
+
+def sync(uid, params):
     data = get_data(params)
     latest = json.loads(data['snapshots'][unicode(data['upperCutoffMillis'])])
-    logging.info(latest)
+    
+    to_put = []
+    for p in latest['parkings']:
+        logging.debug(p)
+        pk = Parking.create_key(create_parking_uid(data['municipality'], p['name']))
+        parking = pk.get()
+        if not parking:
+            parking = Parking(key=pk)
+            parking.visible = True
+            parking.info = ParkingInfo()
+            parking.info.name = p['name']
+            parking.info.capacity = p['totalCapacity']
+            parking.info.contact = p['contactInfo']
+            parking.info.opening_hours = p['openingHours']
+            parking.info.location = ParkingLocation()
+            parking.info.location.geo_location = ndb.GeoPt(p['latitude'],
+                                                           p['longitude'])
+            parking.info.location.address = p['address']
+            parking.info.location.city = data['municipality']
+            to_put.append(parking)
+
+        parking_stats = ParkingStatistics(key=ParkingStatistics.create_key(uid, pk))
+        parking_stats.open = p['open'] or True
+        parking_stats.full = p['full'] or False
+        try:
+            parking_stats.available_capacity = long(p['availableCapacity'])
+        except:
+            parking_stats.available_capacity = parking.info.capacity
+        to_put.append(parking_stats)
+
+    if to_put:
+        logging.info('put %s items', len(to_put))
+        put_in_chunks(to_put, is_ndb=True)

@@ -1,0 +1,6 @@
+indexes:
+  - kind: ParkingStatistics
+    ancestor: yes
+    properties:
+    - name: created
+      direction: desc

@@ -34,3 +34,60 @@ class Settings(NdbModel):
     @property
     def uid(self):
         return self.key.id().decode('utf-8')
+
+
+class ParkingLocation(NdbModel):
+    geo_location = ndb.GeoPtProperty()
+    address = ndb.TextProperty()
+    city = ndb.StringProperty()
+
+
+class ParkingInfo(NdbModel):
+    name = ndb.StringProperty()
+    capacity = ndb.IntegerProperty()
+    contact = ndb.TextProperty()
+    opening_hours = ndb.TextProperty()
+    location = ndb.LocalStructuredProperty(ParkingLocation)
+
+
+class Parking(NdbModel):
+    NAMESPACE = consts.NAME
+
+    created = ndb.DateTimeProperty(auto_now_add=True)
+    updated = ndb.DateTimeProperty(auto_now=True)
+
+    visible = ndb.BooleanProperty()
+
+    info = ndb.LocalStructuredProperty(ParkingInfo)
+
+    @classmethod
+    def create_key(cls, uid):
+        return ndb.Key(cls, uid, namespace=consts.NAME)
+
+    @property
+    def uid(self):
+        return self.key.id().decode('utf-8')
+
+    def get_latest_stats(self):
+        qry = ParkingStatistics.list_with_parent(self.key)
+        qry = qry.order(-ParkingStatistics.created)
+        return qry.get()
+
+
+class ParkingStatistics(NdbModel):
+    NAMESPACE = consts.NAME
+
+    created = ndb.DateTimeProperty(auto_now_add=True)
+
+    open = ndb.BooleanProperty()
+    full = ndb.BooleanProperty()
+    available_capacity = ndb.IntegerProperty()
+
+    @classmethod
+    def create_key(cls, uid, parent):
+        return ndb.Key(cls, uid, parent=parent)
+
+    @classmethod
+    def list_with_parent(cls, key):
+        qry = cls.query(ancestor=key)
+        return qry

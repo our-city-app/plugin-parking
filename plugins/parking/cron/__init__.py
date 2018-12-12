@@ -18,24 +18,26 @@
 import webapp2
 
 from framework.bizz.job import run_job
+from framework.utils import guid
 from plugins.parking.models import Settings
 
 
 class ParkingSyncHandler(webapp2.RequestHandler):
 
     def get(self):
-        run_job(_query_settings, [], _worker_settings, [])
+        uid = guid()
+        run_job(_query_settings, [], _worker_settings, [uid])
 
 
 def _query_settings():
     return Settings.query()
 
 
-def _worker_settings(settings_key):
+def _worker_settings(settings_key, uid):
     from plugins.parking.backends.mycsn import sync as mycsn_sync
     settings = settings_key.get()
     b = settings.params.get('backend')
     if not b:
         return
     if b in ('mycsn'):
-        mycsn_sync(settings.params)
+        mycsn_sync(uid, settings.params)

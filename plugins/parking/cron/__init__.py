@@ -19,6 +19,7 @@ import webapp2
 
 from framework.bizz.job import run_job
 from framework.utils import guid
+from plugins.parking.consts import PARKING_QUEUE
 from plugins.parking.models import Settings
 
 
@@ -26,7 +27,7 @@ class ParkingSyncHandler(webapp2.RequestHandler):
 
     def get(self):
         uid = guid()
-        run_job(_query_settings, [], _worker_settings, [uid])
+        run_job(_query_settings, [], _worker_settings, [uid], worker_queue=PARKING_QUEUE)
 
 
 def _query_settings():

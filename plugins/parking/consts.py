@@ -16,3 +16,5 @@
 # @@license_version:1.5@@
 
 NAME = 'parking'
+
+PARKING_QUEUE = "parking-queue"
